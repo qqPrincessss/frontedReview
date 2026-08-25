@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  reviews Review[]
+
+  @@map("users")
+}
+
+enum ReviewStatus {
+  PENDING
+  COMPLETED
+  FAILED
+
+  @@map("review_status")
+}
+
+model Review {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  diffContent     String       @map("diff_content") @db.Text
+  language        String?      @db.VarChar(20)
+  branchFrom      String?      @map("branch_from") @db.VarChar(100)
+  branchTo        String?      @map("branch_to") @db.VarChar(100)
+  summary         String?      @db.Text
+  overallScore    Int?         @map("overall_score")
+  dimensionScores Json?        @map("dimension_scores") @db.JsonB
+  highlights      Json?        @db.JsonB
+  status          ReviewStatus @default(PENDING)
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  user   User          @relation(fields: [userId], references: [id])
+  issues ReviewIssue[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+enum Severity {
+  ERROR
+  WARNING
+  INFO
+
+  @@map("severity")
+}
+
+model ReviewIssue {
+  id         String   @id @default(uuid())
+  reviewId   String   @map("review_id")
+  filePath   String   @map("file_path") @db.VarChar(500)
+  lineRange  String?  @map("line_range") @db.VarChar(20)
+  severity   Severity
+  dimension  String   @db.VarChar(20)
+  what       String   @db.Text
+  why        String   @db.Text
+  suggestion String   @db.Text
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@index([severity])
+  @@map("review_issues")
+}

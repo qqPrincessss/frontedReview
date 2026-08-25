@@ -1,0 +1,21 @@
+{
+  "name": "codereview-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered frontend code review tool",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=packages/server",
+    "build:server": "npm run build --workspace=packages/server",
+    "dev:cli": "npm run dev --workspace=packages/cli",
+    "build:cli": "npm run build --workspace=packages/cli",
+    "build": "npm run build:server && npm run build:cli",
+    "lint": "eslint packages/*/src --ext .ts",
+    "format": "prettier --write \"packages/*/src/**/*.ts\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

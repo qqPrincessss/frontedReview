@@ -1,0 +1,34 @@
+{
+  "summary": "组件严重违反单一职责，200行代码混合了数据获取、状态管理、业务逻辑和UI渲染",
+  "overall_score": 32,
+  "dimension_scores": {
+    "srp": { "score": 2, "note": "一个组件承担了5种以上职责" },
+    "abstraction": { "score": 3, "note": "API调用和DOM操作混在同一层" },
+    "naming": { "score": 3, "note": "大量data、info、handleClick等无意义命名" },
+    "dry": { "score": 4, "note": "三处几乎相同的列表渲染逻辑" },
+    "coupling": { "score": 3, "note": "直接读取store内部嵌套结构" },
+    "readability": { "score": 2, "note": "5层嵌套的条件判断" },
+    "consistency": { "score": 5, "note": "部分用async/await部分用.then" }
+  },
+  "issues": [
+    {
+      "file_path": "src/pages/Dashboard.tsx",
+      "line_range": "1-200",
+      "severity": "error",
+      "dimension": "srp",
+      "what": "Dashboard组件同时处理用户数据获取、权限判断、图表计算、列表渲染",
+      "why": "任何一个需求变更都要修改这个200行的巨型组件，极易引入回归bug",
+      "suggestion": "拆分为 useDashboardData hook + PermissionGate + ChartSection + ListSection"
+    },
+    {
+      "file_path": "src/pages/Dashboard.tsx",
+      "line_range": "45-89",
+      "severity": "error",
+      "dimension": "readability",
+      "what": "5层嵌套的if-else判断用户状态",
+      "why": "阅读者需要在脑中维护5个条件分支的上下文",
+      "suggestion": "使用早返回(early return)模式或状态机模式重构"
+    }
+  ],
+  "highlights": []
+}
