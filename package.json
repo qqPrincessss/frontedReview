@@ -12,10 +12,15 @@
     "dev:cli": "npm run dev --workspace=packages/cli",
     "build:cli": "npm run build --workspace=packages/cli",
     "build": "npm run build:server && npm run build:cli",
+    "test:smoke": "npm run build && node packages/server/scripts/smoke-test.js",
+    "test:unit": "npm run test:unit --workspace=packages/server",
     "lint": "eslint packages/*/src --ext .ts",
     "format": "prettier --write \"packages/*/src/**/*.ts\""
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@supabase/server": "^1.4.1"
   }
 }

@@ -1,7 +1,8 @@
 import { Command } from 'commander';
-import { loginCommand } from './commands/login';
+import { loginCommand, logoutCommand } from './commands/login';
 import { reviewCommand } from './commands/review';
 import { historyCommand } from './commands/history';
+import { showCommand } from './commands/show';
 
 const program = new Command();
 
@@ -12,7 +13,9 @@ program
 
 // 注册子命令
 program.addCommand(loginCommand);
+program.addCommand(logoutCommand);
 program.addCommand(reviewCommand);
 program.addCommand(historyCommand);
+program.addCommand(showCommand);
 
 program.parse(process.argv);

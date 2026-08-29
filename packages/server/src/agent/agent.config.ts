@@ -5,6 +5,7 @@ export const AGENT_CONFIG: AgentConfig = {
   maxTurns: 1,
   allowedTools: [],
   temperature: 0.3,
+  maxTokens: 4096,
 
   // 超时与重试
   timeout: 60_000,

@@ -7,47 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  username     String   @unique @db.VarChar(50)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  reviews Review[]
-
-  @@map("users")
-}
-
 enum ReviewStatus {
   PENDING
+  RUNNING
   COMPLETED
   FAILED
 
   @@map("review_status")
-}
-
-model Review {
-  id              String       @id @default(uuid())
-  userId          String       @map("user_id")
-  diffContent     String       @map("diff_content") @db.Text
-  language        String?      @db.VarChar(20)
-  branchFrom      String?      @map("branch_from") @db.VarChar(100)
-  branchTo        String?      @map("branch_to") @db.VarChar(100)
-  summary         String?      @db.Text
-  overallScore    Int?         @map("overall_score")
-  dimensionScores Json?        @map("dimension_scores") @db.JsonB
-  highlights      Json?        @db.JsonB
-  status          ReviewStatus @default(PENDING)
-  createdAt       DateTime     @default(now()) @map("created_at")
-
-  user   User          @relation(fields: [userId], references: [id])
-  issues ReviewIssue[]
-
-  @@index([userId])
-  @@index([createdAt])
-  @@map("reviews")
 }
 
 enum Severity {
@@ -58,20 +24,136 @@ enum Severity {
   @@map("severity")
 }
 
+enum ReviewRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+
+  @@map("review_run_status")
+}
+
+enum ParseStatus {
+  SUCCEEDED
+  FALLBACK
+  FAILED
+
+  @@map("parse_status")
+}
+
+enum FeedbackRating {
+  UP
+  DOWN
+
+  @@map("feedback_rating")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  reviews   Review[]
+  feedbacks ReviewFeedback[]
+
+  @@map("users")
+}
+
+model Review {
+  id              String       @id @default(uuid()) @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  diffContent     String       @map("diff_content") @db.Text
+  language        String?      @db.VarChar(30)
+  branchFrom      String?      @map("branch_from") @db.VarChar(255)
+  branchTo        String?      @map("branch_to") @db.VarChar(255)
+  summary         String?      @db.Text
+  overallScore    Int?         @map("overall_score") @db.SmallInt
+  dimensionScores Json?        @map("dimension_scores") @db.JsonB
+  highlights      Json?        @db.JsonB
+  status          ReviewStatus @default(PENDING)
+  errorCode       String?      @map("error_code") @db.VarChar(80)
+  errorMessage    String?      @map("error_message") @db.Text
+  startedAt       DateTime?    @map("started_at")
+  completedAt     DateTime?    @map("completed_at")
+  failedAt        DateTime?    @map("failed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  issues    ReviewIssue[]
+  runs      ReviewRun[]
+  feedbacks ReviewFeedback[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@map("reviews")
+}
+
 model ReviewIssue {
-  id         String   @id @default(uuid())
-  reviewId   String   @map("review_id")
+  id         String   @id @default(uuid()) @db.Uuid
+  reviewId   String   @map("review_id") @db.Uuid
+  ordinal    Int      @db.SmallInt
   filePath   String   @map("file_path") @db.VarChar(500)
-  lineRange  String?  @map("line_range") @db.VarChar(20)
+  lineRange  String?  @map("line_range") @db.VarChar(50)
   severity   Severity
-  dimension  String   @db.VarChar(20)
+  dimension  String   @db.VarChar(50)
   what       String   @db.Text
   why        String   @db.Text
   suggestion String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
 
   review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
-  @@index([reviewId])
-  @@index([severity])
+  @@unique([reviewId, ordinal])
+  @@index([reviewId, severity])
+  @@index([reviewId, dimension])
   @@map("review_issues")
+}
+
+model ReviewRun {
+  id            String          @id @default(uuid()) @db.Uuid
+  reviewId      String          @map("review_id") @db.Uuid
+  attemptNo     Int             @map("attempt_no") @db.SmallInt
+  provider      String          @db.VarChar(30)
+  model         String          @db.VarChar(100)
+  promptVersion String?         @map("prompt_version") @db.VarChar(100)
+  parameters    Json?           @db.JsonB
+  status        ReviewRunStatus @default(PENDING)
+  parseStatus   ParseStatus?    @map("parse_status")
+  rawResponse   String?         @map("raw_response") @db.Text
+  errorCode     String?         @map("error_code") @db.VarChar(80)
+  errorMessage  String?         @map("error_message") @db.Text
+  inputTokens   Int?            @map("input_tokens")
+  outputTokens  Int?            @map("output_tokens")
+  latencyMs     Int?            @map("latency_ms")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  startedAt     DateTime?       @map("started_at")
+  finishedAt    DateTime?       @map("finished_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, attemptNo])
+  @@index([reviewId, createdAt])
+  @@index([status, createdAt])
+  @@map("review_runs")
+}
+
+model ReviewFeedback {
+  id        String         @id @default(uuid()) @db.Uuid
+  reviewId  String         @map("review_id") @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  rating    FeedbackRating
+  comment   String?        @db.Text
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("review_feedback")
 }

@@ -3,12 +3,13 @@ import {
   Get,
   Param,
   UseGuards,
-  Request,
+  Req,
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ReportService } from './report.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../../common/interfaces/authenticated-request.interface';
 
 @Controller('reviews')
 @UseGuards(JwtAuthGuard)
@@ -18,7 +19,7 @@ export class ReportController {
   @Get(':id/pdf')
   async downloadPdf(
     @Param('id') id: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Res() res: Response,
   ) {
     const pdfBuffer = await this.reportService.generatePdf(id, req.user.id);

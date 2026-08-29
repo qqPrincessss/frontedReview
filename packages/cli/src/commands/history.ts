@@ -1,16 +1,25 @@
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { apiClient } from '../utils/api';
 import { getConfig } from '../utils/config';
 
+interface HistoryItem {
+  id: string;
+  summary?: string;
+  overall_score?: number;
+  status: string;
+  created_at: string;
+}
+
 export const historyCommand = new Command('history')
   .description('查看审查历史记录')
   .option('--limit <number>', '显示条数', '10')
-  .action(async (options) => {
+  .action(async (options: { limit: string }) => {
     const config = getConfig();
-
     if (!config.token) {
       console.error('✗ 请先登录：review login -u <username> -p <password>');
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     try {
@@ -18,30 +27,22 @@ export const historyCommand = new Command('history')
         params: { limit: options.limit },
         headers: { Authorization: `Bearer ${config.token}` },
       });
+      const data = (response.data as { data: { items: HistoryItem[]; total: number } }).data;
 
-      const { items, total } = response.data.data;
-
-      if (items.length === 0) {
+      if (data.items.length === 0) {
         console.log('暂无审查记录');
         return;
       }
 
-      console.log(`审查历史（共 ${total} 条，显示最近 ${items.length} 条）:`);
-      console.log('');
-
-      items.forEach((item: any) => {
-        const date = new Date(item.createdAt).toLocaleString();
-        const score = item.overallScore ?? '--';
-        console.log(
-          `  [${score}/100] ${item.summary || '(无摘要)'} (${date})`,
-        );
-        console.log(`         ID: ${item.id} | ${item.status}`);
-        console.log('');
+      console.log(`审查历史（共 ${data.total} 条）:\n`);
+      data.items.forEach((item) => {
+        const score = item.overall_score ?? '--';
+        const date = new Date(item.created_at).toLocaleString();
+        console.log(chalk.bold(`  [${score}/100] ${item.summary || '(无摘要)'}`));
+        console.log(`  ${item.id} | ${item.status} | ${date}\n`);
       });
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || error.message || '查询失败';
-      console.error(`✗ ${message}`);
-      process.exit(1);
+    } catch (error: unknown) {
+      console.error(`✗ ${error instanceof Error ? error.message : '查询失败'}`);
+      process.exitCode = 1;
     }
   });

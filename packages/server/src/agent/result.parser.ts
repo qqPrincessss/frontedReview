@@ -1,60 +1,63 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ReviewResult, DimensionScores } from './types';
+import { BadGatewayException, Injectable } from '@nestjs/common';
+import { DimensionScores, ReviewResult } from './types';
 
 @Injectable()
 export class ResultParser {
-  private readonly logger = new Logger(ResultParser.name);
-
-  /**
-   * 解析 Claude 返回的文本为结构化结果
-   */
   parse(rawText: string): ReviewResult {
-    const cleaned = this.cleanMarkdown(rawText);
-    const json = this.safeJsonParse(cleaned);
+    const json = this.safeJsonParse(this.cleanMarkdown(rawText));
     return this.validate(json);
   }
 
   private cleanMarkdown(text: string): string {
-    let cleaned = text.trim();
-    // 移除可能的 ```json ... ``` 包裹
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    }
-    return cleaned;
+    const trimmed = text.trim();
+    const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return fenced ? fenced[1] : trimmed;
   }
 
-  private safeJsonParse(text: string): any {
-    try {
-      return JSON.parse(text);
-    } catch {
-      this.logger.warn('JSON 解析失败，尝试容错处理');
+  private safeJsonParse(text: string): unknown {
+    const candidates = [text, text.match(/\{[\s\S]*\}/)?.[0]].filter(
+      (candidate): candidate is string => Boolean(candidate),
+    );
 
-      // 尝试从文本中提取 JSON 块
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0]);
-        } catch {
-          // 完全无法解析
-        }
+    for (const candidate of candidates) {
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // 继续尝试下一个候选 JSON 块。
       }
-
-      return this.fallbackResult(text);
     }
+
+    throw new BadGatewayException('AI 返回内容无法解析为 JSON');
   }
 
-  private validate(data: any): ReviewResult {
+  private validate(data: unknown): ReviewResult {
+    if (!this.isRecord(data)) {
+      throw new BadGatewayException('AI 返回结果格式不正确');
+    }
+
+    const overallScore = Number(data.overall_score);
+    if (!Number.isFinite(overallScore)) {
+      throw new BadGatewayException('AI 返回结果缺少有效的 overall_score');
+    }
+
     return {
-      summary: data.summary || '审查完成',
-      overall_score: this.clamp(data.overall_score || 0, 0, 100),
+      summary:
+        typeof data.summary === 'string' && data.summary.trim()
+          ? data.summary.trim()
+          : '审查完成',
+      overall_score: this.clamp(overallScore, 0, 100),
       dimension_scores: this.validateDimensions(data.dimension_scores),
       issues: this.validateIssues(data.issues),
-      highlights: Array.isArray(data.highlights) ? data.highlights : [],
+      highlights: Array.isArray(data.highlights)
+        ? data.highlights.filter(
+            (highlight): highlight is string => typeof highlight === 'string',
+          )
+        : [],
     };
   }
 
-  private validateDimensions(scores: any): DimensionScores {
-    const defaultDimension = { score: 0, note: '' };
+  private validateDimensions(scores: unknown): DimensionScores {
+    const source = this.isRecord(scores) ? scores : {};
     const dimensions = [
       'srp',
       'abstraction',
@@ -65,57 +68,53 @@ export class ResultParser {
       'consistency',
     ] as const;
 
-    const result: any = {};
-    for (const dim of dimensions) {
-      if (scores && scores[dim]) {
-        result[dim] = {
-          score: this.clamp(scores[dim].score || 0, 0, 10),
-          note: scores[dim].note || '',
-        };
-      } else {
-        result[dim] = { ...defaultDimension };
-      }
-    }
+    return Object.fromEntries(
+      dimensions.map((dimension) => {
+        const value = source[dimension];
+        const score = this.isRecord(value) ? Number(value.score) : 0;
+        const note =
+          this.isRecord(value) && typeof value.note === 'string' ? value.note : '';
 
-    return result as DimensionScores;
+        return [
+          dimension,
+          {
+            score: Number.isFinite(score) ? this.clamp(score, 0, 10) : 0,
+            note,
+          },
+        ];
+      }),
+    ) as unknown as DimensionScores;
   }
 
-  private validateIssues(issues: any): ReviewResult['issues'] {
+  private validateIssues(issues: unknown): ReviewResult['issues'] {
     if (!Array.isArray(issues)) return [];
 
-    return issues
-      .filter((issue: any) => issue && typeof issue === 'object')
-      .map((issue: any) => ({
-        file_path: issue.file_path || 'unknown',
-        line_range: issue.line_range || '',
-        severity: this.validateSeverity(issue.severity),
-        dimension: issue.dimension || 'readability',
-        what: issue.what || '',
-        why: issue.why || '',
-        suggestion: issue.suggestion || '',
-      }));
+    return issues.filter(this.isRecord).map((issue) => ({
+      file_path:
+        typeof issue.file_path === 'string' ? issue.file_path : 'unknown',
+      line_range:
+        typeof issue.line_range === 'string' ? issue.line_range : '',
+      severity: this.validateSeverity(issue.severity),
+      dimension:
+        typeof issue.dimension === 'string' ? issue.dimension : 'readability',
+      what: typeof issue.what === 'string' ? issue.what : '',
+      why: typeof issue.why === 'string' ? issue.why : '',
+      suggestion:
+        typeof issue.suggestion === 'string' ? issue.suggestion : '',
+    }));
   }
 
-  private validateSeverity(
-    severity: string,
-  ): 'error' | 'warning' | 'info' {
-    const valid = ['error', 'warning', 'info'];
-    return valid.includes(severity) ? (severity as any) : 'warning';
+  private validateSeverity(value: unknown): 'error' | 'warning' | 'info' {
+    return value === 'error' || value === 'warning' || value === 'info'
+      ? value
+      : 'warning';
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
-  }
-
-  private fallbackResult(rawText: string): any {
-    this.logger.warn('使用降级结果');
-    return {
-      summary: '审查完成（结果解析异常，请查看原始输出）',
-      overall_score: 0,
-      dimension_scores: {},
-      issues: [],
-      highlights: [],
-      _raw: rawText.substring(0, 500),
-    };
   }
 }

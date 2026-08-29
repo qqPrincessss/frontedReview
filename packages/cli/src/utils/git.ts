@@ -1,64 +1,47 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
-/**
- * 采集 git diff
- * @param base - 基准（默认 HEAD）
- * @param head - 目标分支（可选）
- */
 export function getDiff(base: string = 'HEAD', head?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      let command: string;
+      verifyRef(base);
+      if (head) verifyRef(head);
 
-      if (head) {
-        // 对比两个分支
-        command = `git diff ${base}...${head}`;
-      } else if (base === 'HEAD') {
-        // 对比工作区和 HEAD
-        command = 'git diff HEAD';
-      } else {
-        // 对比指定 base 到当前 HEAD
-        command = `git diff ${base}...HEAD`;
-      }
+      const range = head
+        ? `${base}...${head}`
+        : base === 'HEAD'
+          ? 'HEAD'
+          : `${base}...HEAD`;
 
-      const diff = execSync(command, {
+      const diff = execFileSync('git', ['diff', range], {
         encoding: 'utf-8',
-        maxBuffer: 1024 * 1024, // 1MB
+        maxBuffer: 1024 * 1024,
       });
-
       resolve(diff);
-    } catch (error: any) {
-      reject(new Error(`git diff 执行失败: ${error.message}`));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      reject(new Error(`git diff 执行失败: ${message}`));
     }
   });
 }
 
-/**
- * 获取当前分支名
- */
 export function getCurrentBranch(): string {
-  return execSync('git rev-parse --abbrev-ref HEAD', {
+  return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
     encoding: 'utf-8',
   }).trim();
 }
 
-/**
- * 检测文件变更中的主要语言
- */
 export function detectLanguage(diff: string): string | undefined {
   const fileExtensions = diff.match(/\+\+\+ b\/.*?\.(ts|tsx|js|jsx|vue)/g);
   if (!fileExtensions) return undefined;
 
-  const extCount: Record<string, number> = {};
+  const counts: Record<string, number> = {};
   fileExtensions.forEach((match) => {
-    const ext = match.split('.').pop() || '';
-    extCount[ext] = (extCount[ext] || 0) + 1;
+    const extension = match.split('.').pop();
+    if (extension) counts[extension] = (counts[extension] || 0) + 1;
   });
 
-  const sorted = Object.entries(extCount).sort((a, b) => b[1] - a[1]);
-  const topExt = sorted[0]?.[0];
-
-  const langMap: Record<string, string> = {
+  const extension = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const languages: Record<string, string> = {
     ts: 'typescript',
     tsx: 'typescript',
     js: 'javascript',
@@ -66,5 +49,12 @@ export function detectLanguage(diff: string): string | undefined {
     vue: 'vue',
   };
 
-  return topExt ? langMap[topExt] : undefined;
+  return extension ? languages[extension] : undefined;
+}
+
+function verifyRef(ref: string): void {
+  execFileSync('git', ['rev-parse', '--verify', `${ref}^{commit}`], {
+    encoding: 'utf-8',
+    stdio: 'pipe',
+  });
 }

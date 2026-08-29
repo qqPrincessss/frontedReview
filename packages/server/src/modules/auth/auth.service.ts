@@ -1,7 +1,9 @@
 import {
   Injectable,
   ConflictException,
-  UnauthorizedException,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -46,7 +48,12 @@ export class AuthService {
       },
     });
 
-    return user;
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      created_at: user.createdAt,
+    };
   }
 
   async login(dto: LoginDto) {
@@ -56,13 +63,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new HttpException('用户名或密码错误', HttpStatus.UNAUTHORIZED);
     }
 
     // 校验密码
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new HttpException('用户名或密码错误', HttpStatus.UNAUTHORIZED);
     }
 
     // 生成 JWT
@@ -93,9 +100,16 @@ export class AuthService {
       },
     });
 
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
     return {
-      ...user,
-      review_count: user?._count?.reviews || 0,
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      created_at: user.createdAt,
+      review_count: user._count.reviews,
     };
   }
 }

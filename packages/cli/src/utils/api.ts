@@ -1,59 +1,80 @@
 import { getConfig } from './config';
 
-/**
- * 简易 HTTP 客户端（基于 fetch，避免额外依赖）
- */
+interface RequestOptions {
+  headers?: Record<string, string>;
+  params?: Record<string, unknown>;
+}
+
 class ApiClient {
-  private getBaseUrl(): string {
-    return getConfig().server || 'http://localhost:3000/api';
-  }
+  private buildUrl(path: string, params?: Record<string, unknown>): URL {
+    const baseUrl = (getConfig().server || 'http://localhost:3000/api').replace(
+      /\/+$/,
+      '',
+    );
+    const endpoint = path.replace(/^\/+/, '');
+    const url = new URL(`${baseUrl}/${endpoint}`);
 
-  async get(path: string, options?: { params?: Record<string, any>; headers?: Record<string, string> }) {
-    const url = new URL(path, this.getBaseUrl());
-    if (options?.params) {
-      Object.entries(options.params).forEach(([key, value]) => {
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
         url.searchParams.set(key, String(value));
-      });
-    }
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      }
     });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      const error: any = new Error(body.message || `HTTP ${response.status}`);
-      error.response = { data: body };
-      throw error;
-    }
-
-    return { data: await response.json() };
+    return url;
   }
 
-  async post(path: string, body: any, options?: { headers?: Record<string, string> }) {
-    const url = new URL(path, this.getBaseUrl());
+  async get(path: string, options: RequestOptions = {}) {
+    return this.request(path, {
+      method: 'GET',
+      headers: options.headers,
+      params: options.params,
+    });
+  }
 
-    const response = await fetch(url.toString(), {
+  async post(
+    path: string,
+    body: unknown,
+    options: RequestOptions = {},
+  ) {
+    return this.request(path, {
       method: 'POST',
+      headers: options.headers,
+      body,
+    });
+  }
+
+  private async request(
+    path: string,
+    options: RequestOptions & { method: 'GET' | 'POST'; body?: unknown },
+  ) {
+    const response = await fetch(this.buildUrl(path, options.params), {
+      method: options.method,
       headers: {
         'Content-Type': 'application/json',
-        ...options?.headers,
+        ...options.headers,
       },
-      body: JSON.stringify(body),
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      const error: any = new Error(data.message || `HTTP ${response.status}`);
+      const message = this.getErrorMessage(data, response.status);
+      const error = new Error(message) as Error & { response?: { data: unknown } };
       error.response = { data };
       throw error;
     }
 
-    return { data: await response.json() };
+    return { data };
+  }
+
+  private getErrorMessage(data: unknown, status: number): string {
+    if (typeof data === 'object' && data !== null && 'message' in data) {
+      const message = (data as { message?: unknown }).message;
+      if (Array.isArray(message)) return message.join('; ');
+      if (typeof message === 'string') return message;
+    }
+
+    return `HTTP ${status}`;
   }
 }
 

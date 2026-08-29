@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
+import { AuthenticatedUser } from '../../../common/interfaces/authenticated-request.interface';
 
 export interface JwtPayload {
   sub: string;
@@ -14,11 +15,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
-  async validate(payload: JwtPayload) {
+  validate(payload: JwtPayload): AuthenticatedUser {
+    if (!payload.sub || !payload.username) {
+      throw new UnauthorizedException('登录凭证内容无效');
+    }
+
     return { id: payload.sub, username: payload.username };
   }
 }

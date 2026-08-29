@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 build/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -21,7 +22,7 @@ build/
 Thumbs.db
 
 # Prisma
-packages/server/prisma/migrations/
+# Migration files are versioned so environments can reproduce the schema.
 
 # Logs
 *.log

@@ -44,6 +44,7 @@ export interface AgentConfig {
   maxTurns: number;
   allowedTools: string[];
   temperature: number;
+  maxTokens: number;
   timeout: number;
   maxRetries: number;
   retryDelay: number;
