@@ -1,0 +1,66 @@
+{
+  "summary": "变更把数据请求、状态处理和展示逻辑集中在单个组件中，并引入了重复分支和跨层依赖，当前实现存在较高的正确性与维护风险。",
+  "overall_score": 32,
+  "dimension_scores": {
+    "srp": {
+      "score": 3,
+      "note": "组件同时负责请求、数据转换、错误恢复和复杂渲染，职责边界不清晰。"
+    },
+    "abstraction": {
+      "score": 3,
+      "note": "业务规则、HTTP 细节和视图节点混在同一函数中，抽象层级频繁切换。"
+    },
+    "naming": {
+      "score": 4,
+      "note": "data、handle 和 result 等名称无法表达数据阶段与操作目的。"
+    },
+    "dry": {
+      "score": 3,
+      "note": "成功与失败分支重复构造状态对象和提示文本，修改时容易产生不一致。"
+    },
+    "coupling": {
+      "score": 3,
+      "note": "组件直接依赖传输层响应结构并修改共享状态，边界间高度耦合。"
+    },
+    "readability": {
+      "score": 3,
+      "note": "多层条件和交错的副作用使主要控制流难以追踪。"
+    },
+    "consistency": {
+      "score": 4,
+      "note": "新增实现绕过了项目已有的服务层和统一错误处理方式。"
+    }
+  },
+  "issues": [
+    {
+      "file_path": "src/components/OrderPanel.tsx",
+      "line_range": "18-82",
+      "severity": "error",
+      "dimension": "srp",
+      "what": "OrderPanel 同时执行请求、转换业务数据、写入全局状态并渲染多个视图状态。",
+      "why": "任一职责变化都会迫使组件整体修改，且副作用交错后容易造成加载状态无法复位或展示旧数据。",
+      "suggestion": "将请求和数据转换提取到 order service 或自定义 hook，由组件只消费明确的 loading、error 和 orders 状态。"
+    },
+    {
+      "file_path": "src/components/OrderPanel.tsx",
+      "line_range": "35-61",
+      "severity": "warning",
+      "dimension": "dry",
+      "what": "多个条件分支重复拼装相同的状态对象和错误提示。",
+      "why": "重复逻辑会在新增状态或修改提示时产生分支行为不一致。",
+      "suggestion": "提取统一的状态创建函数，并让各分支只传入差异数据。"
+    },
+    {
+      "file_path": "src/components/OrderPanel.tsx",
+      "line_range": "22-70",
+      "severity": "warning",
+      "dimension": "coupling",
+      "what": "UI 直接读取 HTTP 响应的嵌套字段并依赖具体错误码。",
+      "why": "后端响应结构变化会直接破坏组件，且相同协议知识会扩散到更多视图。",
+      "suggestion": "在 API 层将响应映射为稳定的领域对象和统一错误类型，再交给组件使用。"
+    }
+  ],
+  "highlights": [
+    "变更为加载、成功和失败状态提供了明确的用户反馈。"
+  ]
+}

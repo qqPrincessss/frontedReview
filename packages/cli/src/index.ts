@@ -1,5 +1,9 @@
 import { Command } from 'commander';
-import { loginCommand, logoutCommand } from './commands/login';
+import {
+  loginCommand,
+  logoutCommand,
+  registerCommand,
+} from './commands/login';
 import { reviewCommand } from './commands/review';
 import { historyCommand } from './commands/history';
 import { showCommand } from './commands/show';
@@ -12,6 +16,7 @@ program
   .version('0.1.0');
 
 // 注册子命令
+program.addCommand(registerCommand);
 program.addCommand(loginCommand);
 program.addCommand(logoutCommand);
 program.addCommand(reviewCommand);

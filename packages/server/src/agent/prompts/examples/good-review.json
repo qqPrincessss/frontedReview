@@ -1,0 +1,50 @@
+{
+  "summary": "变更边界清晰，数据访问、状态管理和展示职责分离良好，命名准确且控制流简洁，在当前 diff 范围内仅有轻微改进空间。",
+  "overall_score": 88,
+  "dimension_scores": {
+    "srp": {
+      "score": 9,
+      "note": "服务、hook 和组件各自承担单一且明确的职责。"
+    },
+    "abstraction": {
+      "score": 9,
+      "note": "每个函数都在一致的抽象层级上表达业务步骤。"
+    },
+    "naming": {
+      "score": 9,
+      "note": "类型、状态和操作名称准确描述了用途及生命周期。"
+    },
+    "dry": {
+      "score": 9,
+      "note": "共享转换和错误处理得到复用，没有明显重复实现。"
+    },
+    "coupling": {
+      "score": 8,
+      "note": "模块通过稳定接口协作，组件仍对查询键有一处轻量依赖。"
+    },
+    "readability": {
+      "score": 9,
+      "note": "主流程短而直接，错误与加载状态的处理位置明确。"
+    },
+    "consistency": {
+      "score": 9,
+      "note": "实现延续了项目现有的类型、服务和状态管理约定。"
+    }
+  },
+  "issues": [
+    {
+      "file_path": "src/features/account/useAccount.ts",
+      "line_range": "24",
+      "severity": "info",
+      "dimension": "coupling",
+      "what": "查询键字符串在 hook 内直接声明。",
+      "why": "当其他模块需要使同一查询失效时，可能重复声明并产生拼写差异。",
+      "suggestion": "如果该查询键会被跨模块使用，可将其提取为 accountQueryKeys 工厂；若仅本文件使用则保持现状也合理。"
+    }
+  ],
+  "highlights": [
+    "API 响应在服务层转换为领域类型，组件不依赖传输层结构。",
+    "异步状态通过单一 hook 暴露，组件保持了清晰的声明式渲染。",
+    "错误处理保留了用户可理解的信息，同时没有泄露底层实现细节。"
+  ]
+}

@@ -1,22 +1,19 @@
-import { Module, NotImplementedException } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AgentService } from './agent.service';
-import { MODEL_CLIENT, ModelClient } from './model-client';
+import { AnthropicClient } from './anthropic.client';
+import { MODEL_CLIENT } from './model-client';
 import { PromptBuilder } from './prompt.builder';
 import { ResultParser } from './result-parser';
-
-const unconfiguredModelClient: ModelClient = {
-  generate: () =>
-    Promise.reject(new NotImplementedException('模型客户端尚未实现')),
-};
 
 @Module({
   providers: [
     AgentService,
+    AnthropicClient,
     PromptBuilder,
     ResultParser,
     {
       provide: MODEL_CLIENT,
-      useValue: unconfiguredModelClient,
+      useExisting: AnthropicClient,
     },
   ],
   exports: [AgentService],

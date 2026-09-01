@@ -1,0 +1,58 @@
+{
+  "summary": "变更能够完成目标，命名和基本控制流较清楚，但业务规则仍部分停留在组件中，重复状态处理和接口耦合会增加后续扩展成本。",
+  "overall_score": 62,
+  "dimension_scores": {
+    "srp": {
+      "score": 6,
+      "note": "主要职责可辨识，但组件仍承担了部分数据转换和提交编排。"
+    },
+    "abstraction": {
+      "score": 6,
+      "note": "大部分逻辑层级一致，个别分支混入了底层响应处理。"
+    },
+    "naming": {
+      "score": 7,
+      "note": "核心变量和函数名称能表达用途，少数状态名称仍可更具体。"
+    },
+    "dry": {
+      "score": 6,
+      "note": "两个提交分支共享较多状态更新步骤，存在可收敛的重复。"
+    },
+    "coupling": {
+      "score": 6,
+      "note": "组件通过服务调用接口，但仍了解部分传输层错误结构。"
+    },
+    "readability": {
+      "score": 6,
+      "note": "主流程可理解，但状态更新散布在多个分支中，需要来回追踪。"
+    },
+    "consistency": {
+      "score": 7,
+      "note": "整体遵循项目现有写法，仅错误处理方式与公共封装略有偏差。"
+    }
+  },
+  "issues": [
+    {
+      "file_path": "src/features/profile/ProfileForm.tsx",
+      "line_range": "42-68",
+      "severity": "warning",
+      "dimension": "srp",
+      "what": "表单组件同时负责字段展示、请求参数转换和保存后的缓存同步。",
+      "why": "缓存策略或接口字段变化会直接影响视图组件，增加测试与复用成本。",
+      "suggestion": "将请求参数转换和缓存同步移动到 useUpdateProfile hook，组件只提交表单值并展示状态。"
+    },
+    {
+      "file_path": "src/features/profile/ProfileForm.tsx",
+      "line_range": "51-66",
+      "severity": "info",
+      "dimension": "dry",
+      "what": "成功和失败路径都重复设置 submitting 状态。",
+      "why": "未来增加提前返回分支时可能遗漏状态恢复。",
+      "suggestion": "使用 try/finally 统一恢复 submitting 状态。"
+    }
+  ],
+  "highlights": [
+    "表单字段名称与用户资料领域含义一致。",
+    "保存期间禁用重复提交，避免了并发请求。"
+  ]
+}
