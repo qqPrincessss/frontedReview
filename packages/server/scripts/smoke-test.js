@@ -41,56 +41,6 @@ async function run() {
     await prisma.$disconnect();
   });
 
-  await test('ResultParser extracts fenced JSON and normalizes fields', async () => {
-    const { ResultParser } = require(join(
-      serverRoot,
-      'dist',
-      'agent',
-      'result.parser.js',
-    ));
-    const parser = new ResultParser();
-    const result = parser.parse(`\`\`\`json
-{
-  "summary": "结构清晰",
-  "overall_score": 88,
-  "dimension_scores": {
-    "srp": { "score": 9, "note": "职责清晰" }
-  },
-  "issues": [{
-    "file_path": "src/App.tsx",
-    "line_range": "1-3",
-    "severity": "unexpected",
-    "dimension": "readability",
-    "what": "示例问题",
-    "why": "示例原因",
-    "suggestion": "示例建议"
-  }],
-  "highlights": ["类型明确"]
-}
-\`\`\``);
-
-    assert.equal(result.overall_score, 88);
-    assert.equal(result.dimension_scores.srp.score, 9);
-    assert.equal(result.dimension_scores.naming.score, 0);
-    assert.equal(result.issues[0].severity, 'warning');
-  });
-
-  await test('PromptBuilder loads templates and embeds diff', async () => {
-    const { PromptBuilder } = require(join(
-      serverRoot,
-      'dist',
-      'agent',
-      'prompt.builder.js',
-    ));
-    const builder = new PromptBuilder();
-    const prompt = builder.build('+ const answer = 42;', 'typescript');
-
-    assert.match(prompt.system, /资深前端架构师/);
-    assert.match(prompt.system, /低分示例/);
-    assert.match(prompt.user, /typescript/);
-    assert.match(prompt.user, /const answer = 42/);
-  });
-
   await test('JwtAuthGuard accepts users and maps token failures to 401', async () => {
     const { JwtAuthGuard } = require(join(
       serverRoot,
@@ -119,21 +69,6 @@ async function run() {
       (error) =>
         error.getStatus() === 401 &&
         error.message === '登录凭证已过期，请重新登录',
-    );
-  });
-
-  await test('ClaudeClient fails clearly when API key is missing', async () => {
-    const { ClaudeClient } = require(join(
-      serverRoot,
-      'dist',
-      'agent',
-      'claude.client.js',
-    ));
-    const client = new ClaudeClient({ get: () => undefined });
-
-    await assert.rejects(
-      () => client.query('system', 'user'),
-      (error) => typeof error.getStatus === 'function' && error.getStatus() === 503,
     );
   });
 

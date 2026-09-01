@@ -4,7 +4,7 @@
   "private": true,
   "description": "CodeReview AI - NestJS Backend",
   "scripts": {
-    "build": "nest build && node scripts/copy-prompts.js",
+    "build": "nest build",
     "test": "npm run test:unit",
     "test:unit": "npm run build && node scripts/run-unit-tests.js",
     "test:unit:run": "node scripts/run-unit-tests.js",
@@ -18,7 +18,6 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.120.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
