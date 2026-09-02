@@ -14,6 +14,7 @@ import Anthropic, {
 } from '@anthropic-ai/sdk';
 import {
   ModelClient,
+  ModelDescriptor,
   ModelRequest,
   ModelResponse,
 } from './model-client';
@@ -46,6 +47,13 @@ export class AnthropicClient implements ModelClient {
     this.model = configService.getOrThrow<string>('ANTHROPIC_MODEL');
   }
 
+  describe(): ModelDescriptor {
+    return {
+      provider: 'anthropic',
+      model: this.model,
+    };
+  }
+
   async generate(request: ModelRequest): Promise<ModelResponse> {
     try {
       const response = await this.client.messages.create({
@@ -62,10 +70,6 @@ export class AnthropicClient implements ModelClient {
         .map((block) => (block.type === 'text' ? block.text : ''))
         .filter((content) => content.length > 0)
         .join('\n');
-
-      if (!text.trim()) {
-        throw new BadGatewayException('Anthropic 没有返回文本内容');
-      }
 
       return {
         text,

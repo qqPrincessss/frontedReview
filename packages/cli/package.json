@@ -1,15 +1,34 @@
 {
   "name": "@codereview-ai/cli",
   "version": "0.1.0",
-  "private": true,
-  "description": "CodeReview AI - CLI Tool",
+  "description": "AI-powered frontend code review CLI",
+  "keywords": [
+    "code-review",
+    "ai",
+    "frontend",
+    "git",
+    "cli"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "bin": {
     "review": "./dist/bin/review.js"
   },
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc --incremental false",
     "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node dist/bin/review.js",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "chalk": "^4.1.2",

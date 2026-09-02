@@ -25,7 +25,13 @@ export interface ModelResponse {
   usage?: ModelUsage;
 }
 
+export interface ModelDescriptor {
+  readonly provider: string;
+  readonly model: string;
+}
+
 export interface ModelClient {
+  describe(): ModelDescriptor;
   generate(request: ModelRequest): Promise<ModelResponse>;
 }
 

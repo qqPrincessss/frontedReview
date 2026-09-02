@@ -113,7 +113,14 @@ async function run() {
     });
 
     assert.equal(result.status, 0, result.stderr || result.stdout);
-    for (const command of ['login', 'logout', 'submit', 'history', 'show']) {
+    for (const command of [
+      'login',
+      'logout',
+      'submit',
+      'history',
+      'show',
+      'feedback',
+    ]) {
       assert.match(result.stdout, new RegExp(`\\b${command}\\b`));
     }
   });

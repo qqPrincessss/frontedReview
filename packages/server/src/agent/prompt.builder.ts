@@ -7,6 +7,8 @@ import {
 } from './review-result.validator';
 import { ReviewResult } from './types';
 
+export const REVIEW_PROMPT_VERSION = 'review-prompt-v1';
+
 export interface BuiltPrompt {
   readonly system: string;
   readonly user: string;
@@ -39,6 +41,10 @@ const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
 @Injectable()
 export class PromptBuilder {
   private readonly systemPrompt: string;
+
+  getVersion(): string {
+    return REVIEW_PROMPT_VERSION;
+  }
 
   constructor() {
     const promptsDirectory = join(__dirname, 'prompts');

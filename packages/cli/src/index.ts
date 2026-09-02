@@ -4,23 +4,29 @@ import {
   logoutCommand,
   registerCommand,
 } from './commands/login';
-import { reviewCommand } from './commands/review';
+import { feedbackCommand } from './commands/feedback';
 import { historyCommand } from './commands/history';
+import { reviewCommand } from './commands/review';
 import { showCommand } from './commands/show';
 
+const packageJson = require('../package.json') as { version: string };
 const program = new Command();
 
 program
   .name('review')
   .description('CodeReview AI - AI 驱动的前端代码审查工具')
-  .version('0.1.0');
+  .version(packageJson.version);
 
-// 注册子命令
 program.addCommand(registerCommand);
 program.addCommand(loginCommand);
 program.addCommand(logoutCommand);
 program.addCommand(reviewCommand);
 program.addCommand(historyCommand);
 program.addCommand(showCommand);
+program.addCommand(feedbackCommand);
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`✗ ${message}`);
+  process.exitCode = 1;
+});

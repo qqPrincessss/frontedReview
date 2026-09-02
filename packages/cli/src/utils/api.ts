@@ -5,6 +5,8 @@ interface RequestOptions {
   params?: Record<string, unknown>;
 }
 
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
 class ApiClient {
   private buildUrl(path: string, params?: Record<string, unknown>): URL {
     const baseUrl = (getConfig().server || 'http://localhost:3000/api').replace(
@@ -43,9 +45,28 @@ class ApiClient {
     });
   }
 
+  async put(
+    path: string,
+    body: unknown,
+    options: RequestOptions = {},
+  ) {
+    return this.request(path, {
+      method: 'PUT',
+      headers: options.headers,
+      body,
+    });
+  }
+
+  async delete(path: string, options: RequestOptions = {}) {
+    return this.request(path, {
+      method: 'DELETE',
+      headers: options.headers,
+    });
+  }
+
   private async request(
     path: string,
-    options: RequestOptions & { method: 'GET' | 'POST'; body?: unknown },
+    options: RequestOptions & { method: HttpMethod; body?: unknown },
   ) {
     const response = await fetch(this.buildUrl(path, options.params), {
       method: options.method,
@@ -59,7 +80,9 @@ class ApiClient {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const message = this.getErrorMessage(data, response.status);
-      const error = new Error(message) as Error & { response?: { data: unknown } };
+      const error = new Error(message) as Error & {
+        response?: { data: unknown };
+      };
       error.response = { data };
       throw error;
     }
