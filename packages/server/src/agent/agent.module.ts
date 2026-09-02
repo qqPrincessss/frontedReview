@@ -4,6 +4,7 @@ import { AnthropicClient } from './anthropic.client';
 import { MODEL_CLIENT } from './model-client';
 import { PromptBuilder } from './prompt.builder';
 import { ResultParser } from './result-parser';
+import { SkillLoader } from './skill.loader';
 
 @Module({
   providers: [
@@ -11,6 +12,7 @@ import { ResultParser } from './result-parser';
     AnthropicClient,
     PromptBuilder,
     ResultParser,
+    SkillLoader,
     {
       provide: MODEL_CLIENT,
       useExisting: AnthropicClient,

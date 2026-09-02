@@ -85,7 +85,7 @@ export class AgentService {
       descriptor: {
         provider: model.provider,
         model: model.model,
-        promptVersion: this.promptBuilder.getVersion(),
+        promptVersion: prompt.version,
         parameters: {
           temperature: REVIEW_TEMPERATURE,
           maxTokens: REVIEW_MAX_TOKENS,

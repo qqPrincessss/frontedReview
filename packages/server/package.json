@@ -4,7 +4,7 @@
   "private": true,
   "description": "CodeReview AI - NestJS Backend",
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && node scripts/copy-review-skills.js",
     "test": "npm run test:unit",
     "test:unit": "npm run build && node scripts/run-unit-tests.js",
     "test:unit:run": "node scripts/run-unit-tests.js",
